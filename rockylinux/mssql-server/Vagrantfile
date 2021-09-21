@@ -1,0 +1,76 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  ip = ENV['VM_IP'] || '' #"192.168.33.10"
+  memory = ENV['VM_MEMORY'] || 2048
+  cpus = ENV['VM_CPUS'] || 2
+
+
+  config.trigger.before :up do |trigger|
+    trigger.info = "Vagrant UP"
+    trigger.ruby do |env, machine|
+      puts "Machine: #{machine}!"
+      puts "VM_IP: #{ip} (private network)"
+      puts "VM_MEMORY: #{memory}"
+      puts "VM_CPUS: #{cpus}"
+    end
+  end
+
+  config.vm.post_up_message = ''
+
+  config.vm.box = "giflw/rockylinux"
+
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.vm.network "forwarded_port", guest: 1433, host: 1433
+
+  config.vm.network "public_network"
+
+  unless ip.empty?
+    config.vm.network "private_network", ip: ip
+  end
+
+  config.vm.synced_folder "./projects", "/var/www/html/projects"
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.gui = false
+    vb.memory = memory
+    vb.cpus = cpus
+  end
+
+  config.vm.provision "shell",
+    env: {
+      VM_BOX: config.vm.box,
+      MSSQL_SA_PASSWORD: ENV['MSSQL_SA_PASSWORD'],
+      MSSQL_PID: ENV['MSSQL_PID'],
+      FIREWALL_ALLOW_MSSQL: ENV['MSSQL_ALLOW_FIREWALL'],
+      SQL_ENABLE_AGENT: ENV['SQL_ENABLE_AGENT'],
+      SQL_INSTALL_FULLTEXT: ENV['SQL_INSTALL_FULLTEXT'],
+      SQL_INSTALL_USER: ENV['SQL_INSTALL_USER'],
+      SQL_INSTALL_USER_PASSWORD: ENV['SQL_INSTALL_USER_PASSWORD']
+    },
+  inline: <<-SHELL
+    for script in install-mssql-server.sh install-httpd-php.sh; do
+      if [ -f /vagrant/${script} ]; then
+        cp /vagrant/${script} /usr/local/bin/${script}
+        chmod +x /usr/local/bin/${script}
+      fi
+      /usr/local/bin/${script}
+    done
+    echo "=================================================="
+    echo "Done shell provision from ${VM_BOX}!"
+    echo "Network interfaces:"
+    ip add show | egrep ': |inet ' | awk '{print $2}' | xargs -L 2
+    echo "=================================================="
+  SHELL
+
+  puts "=================================================="
+  puts "VM networks:"
+  config.vm.networks.each do | key, item |
+    netinfo="#{item[:protocol].rjust(6, ' ')} #{item[:guest].to_s.rjust(6, ' ')} => #{item[:host].to_s.rjust(6, ' ')}"
+    puts "#{key}: #{netinfo} (##{item[:id]})"
+  end
+  puts "=================================================="
+
+end
