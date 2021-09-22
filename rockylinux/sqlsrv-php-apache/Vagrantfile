@@ -1,0 +1,121 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$defaults = {
+  "VM_IP" => "",
+  "VM_MEMORY" => 2048,
+  "VM_CPUS" => 2,
+  "VM_GUI" => "false",
+  "VM_DEFAULT_SYNCED_FOLDER" => "false",
+  "MSSQL_SA_PASSWORD" => "YourStrong!Passw0rd",
+  "MSSQL_PID" => "Developer",
+  "MSSQL_ALLOW_FIREWALL" => "true",
+  "SQL_ENABLE_AGENT" => "true",
+  "SQL_INSTALL_FULLTEXT" => "true",
+  "SQL_INSTALL_USER" => "admin",
+  "SQL_INSTALL_USER_PASSWORD" => "Admin123!",
+  "PHP_VERSION" => "7.2",
+  "MSSQL_VERSION" => "2019",
+  "HTTP_PORT" => 8080,
+  "MSSQL_PORT" => 1433,
+  "WWW_FOLDER" => '.'
+}
+
+$env_calls = {}
+
+def env(var_name)
+  value = ENV[var_name] || $defaults[var_name]
+  $env_calls[var_name] = value
+  return value
+end
+
+
+Vagrant.configure("2") do |config|
+
+  ip = env('VM_IP')
+  memory = env('VM_MEMORY')
+  cpus = env('VM_CPUS')
+
+  config.trigger.before :up do |trigger|
+    trigger.info = "Vagrant UP"
+    trigger.ruby do |env, machine|
+      puts "VM_IP: #{ip} (private network)"
+      puts "VM_MEMORY: #{memory}"
+      puts "VM_CPUS: #{cpus}"
+    end
+  end
+
+  config.vm.post_up_message = ''
+
+  config.vm.box = "giflw/rockylinux"
+
+  config.vm.network "forwarded_port", guest: 80, host: env('HTTP_PORT')
+  config.vm.network "forwarded_port", guest: 1433, host: env('MSSQL_PORT')
+
+  config.vm.network "public_network"
+
+  unless ip&.empty?
+    config.vm.network "private_network", ip: ip
+  end
+
+  config.vm.synced_folder env('WWW_FOLDER'), "/var/www/html"
+
+  config.vm.provider "virtualbox" do |vb|
+    if env("VM_GUI") == "true"
+      vb.customize ['modifyvm', :id, '--clipboard', 'bidirectional'] 
+      vb.gui = true
+    else
+      vb.gui = false
+    end
+    vb.memory = memory
+    vb.cpus = cpus
+  end
+
+  config.vm.synced_folder ".", "/vagrant", disabled: env('VM_DEFAULT_SYNCED_FOLDER') != 'true'
+
+  config.vm.provision "shell",
+    env: {
+      "VM_BOX" => config.vm.box,
+      "MSSQL_SA_PASSWORD" => env('MSSQL_SA_PASSWORD'),
+      "MSSQL_PID" => env('MSSQL_PID'),
+      "FIREWALL_ALLOW_MSSQL" => env('MSSQL_ALLOW_FIREWALL'),
+      "SQL_ENABLE_AGENT" => env('SQL_ENABLE_AGENT'),
+      "SQL_INSTALL_FULLTEXT" => env('SQL_INSTALL_FULLTEXT'),
+      "SQL_INSTALL_USER" => env('SQL_INSTALL_USER'),
+      "SQL_INSTALL_USER_PASSWORD" => env('SQL_INSTALL_USER_PASSWORD'),
+      "PHP_VERSION" => env('PHP_VERSION'),
+      "MSSQL_VERSION" => env('MSSQL_VERSION')
+    },
+  inline: <<-SHELL
+    cp -v /vagrant/vagrant-swapfile.sh /usr/local/bin/vagrant-swapfile.sh
+    chmod +x /usr/local/bin/vagrant-swapfile.sh
+    for script in install-mssql-server.sh install-httpd-php.sh; do
+      if [ -f /vagrant/${script} ]; then
+        cp -v /vagrant/${script} /usr/local/bin/${script}
+        chmod +x /usr/local/bin/${script}
+      fi
+      /usr/local/bin/${script}
+    done
+    echo "=================================================="
+    echo "Done shell provision from ${VM_BOX}!"
+    echo "Network interfaces:"
+    ip add show | egrep ': |inet ' | awk '{print $2}' | xargs -L 2
+    echo "=================================================="
+  SHELL
+
+  puts "=================================================="
+  puts "VM networks:"
+  config.vm.networks.each do | key, item |
+    netinfo="#{item[:protocol].rjust(6, ' ')} #{item[:guest].to_s.rjust(6, ' ')} => #{item[:host].to_s.rjust(6, ' ')}"
+    puts "#{key}: #{netinfo} (##{item[:id]})"
+  end
+  puts "=================================================="
+
+  puts "=================================================="
+  puts "Readed environment variables"
+  $env_calls.each do | key, value |
+    puts "#{key}: #{value}"
+  end
+  puts "=================================================="
+
+end
