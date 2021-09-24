@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd $SCRIPT_DIR
 
+export RANDOM_PORTS=true
+
 function build_box {
     envvars="`jq -r .env info.json`"
     if [ -n "$envvars" ]; then
@@ -36,10 +38,12 @@ function build_box {
 
     vagrant cloud publish \
         giflw/${name} \
-        "`jq .os -r info.json | cut -f 2 -d -`-`date +%Y%m%d%H%M`" \
+        "`jq .os -r info.json | cut -f 2 -d -`-`date --utc +%Y%m%d%H%M`" \
         virtualbox \
-        ./${name}.box \
+        ${name}.box \
         --version-description "`jq .description -r info.json`" \
+        --checksum "`sha512sum ${name}.box | awk '{print $1}'`" \
+        --checksum-type sha512 \
         --release \
         --no-private \
         --force

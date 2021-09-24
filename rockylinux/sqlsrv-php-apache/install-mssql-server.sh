@@ -1,14 +1,6 @@
 #!/bin/bash -e
 # based on: https://docs.microsoft.com/pt-br/sql/linux/sample-unattended-install-redhat?view=sql-server-ver15
 
-# dependencies:start
-# based on: https://docs.microsoft.com/pt-br/sql/linux/quickstart-install-connect-red-hat?view=sql-server-ver15
-# If not configured, install python2 and openssl10 using the following commands: 
-sudo yum install -y python2
-sudo yum install -y compat-openssl10
-sudo alternatives --set python /usr/bin/python2
-# dependencies:end
-
 # Use the following variables to control your install:
 
 # Password for the SA user (required)
@@ -50,15 +42,25 @@ fi
 mssql_installed=1
 if [ ! `which mssql-conf 2> /dev/null` ]; then
   mssql_installed=0
+
+  # dependencies:start
+  # based on: https://docs.microsoft.com/pt-br/sql/linux/quickstart-install-connect-red-hat?view=sql-server-ver15
+  # If not configured, install python2 and openssl10 using the following commands: 
+  echo 'Installing MSSQL Server dependencies'
+  sudo yum install -y python2
+  sudo yum install -y compat-openssl10
+  sudo alternatives --set python /usr/bin/python2
+  # dependencies:end
+
   echo Adding Microsoft repositories...
   sudo curl -o /etc/yum.repos.d/mssql-server.repo https://packages.microsoft.com/config/rhel/8/mssql-server-2019.repo
 
   echo Installing SQL Server...
   sudo yum install -y mssql-server
 fi
+echo "mssql_installed = $mssql_installed"
 
 echo Running mssql-conf setup...
-echo 'mssql_installed =' $mssql_installed
 if [ $mssql_installed -eq 1 ]; then
   sudo systemctl stop mssql-server
 fi
@@ -69,15 +71,15 @@ sudo MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD \
 if [ ! `which sqlcmd 2> /dev/null` ]; then
   echo Installing mssql-tools and unixODBC developer...
   sudo curl -o /etc/yum.repos.d/msprod.repo https://packages.microsoft.com/config/rhel/8/prod.repo
-  sudo ACCEPT_EULA=Y yum install -y mssql-tools unixODBC-devel
+  sudo ACCEPT_EULA=Y yum install -y mssql-tools unixODBC unixODBC-devel
 fi
 
 # Add SQL Server tools to the path by default:
-echo Adding SQL Server tools to your path...
 if [ ! -d '/etc/profile.d' ]; then
   mkdir /etc/profile.d
 fi
 if [ ! `grep '/opt/mssql-tools/bin:/opt/mssql/bin' /etc/profile.d/mssql-server.sh 2> /dev/null` ]; then
+  echo Adding SQL Server tools to your path...
   echo PATH="$PATH:/opt/mssql-tools/bin:/opt/mssql/bin" >> /etc/profile.d/mssql-server.sh
   source /etc/profile.d/mssql-server.sh
 fi
@@ -87,10 +89,10 @@ echo SQL Server Agent enable=$SQL_ENABLE_AGENT...
 sudo /opt/mssql/bin/mssql-conf set sqlagent.enabled $SQL_ENABLE_AGENT
 
 # Optional SQL Server Full Text Search installation:
-if [ "$SQL_INSTALL_FULLTEXT" = 'true' ]; then
+if [ "$SQL_INSTALL_FULLTEXT" = 'true' -a -z "`rpm -qa mssql-server-fts`" ]; then
   echo Installing SQL Server Full-Text Search...
   sudo yum install -y mssql-server-fts
-else
+elif [ -n "`rpm -qa mssql-server-fts`" ]
   echo Removing SQL Server Full-Text Search...
   sudo yum remove -y mssql-server-fts
 fi
@@ -161,4 +163,4 @@ if [ ! -z $SQL_INSTALL_USER ] && [ ! -z $SQL_INSTALL_USER_PASSWORD ]; then
         ALTER SERVER ROLE [sysadmin] ADD MEMBER [$SQL_INSTALL_USER]"
 fi
 
-echo Done!
+echo "$0 done!"

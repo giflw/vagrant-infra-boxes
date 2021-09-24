@@ -3,7 +3,7 @@
 PHP_VERSION=${PHP_VERSION:=7.2}
 MSSQL_SA_PASSWORD="${MSSQL_SA_PASSWORD:=YourStrong!Passw0rd}"
 
-if [ `rpm -qa | grep -e "^httpd-2" | wc -l` -eq 0 ]; then
+if [ -z "`rpm -qa httpd`" ]; then
     echo Installing Apache httpd
     sudo dnf install -y @httpd
 
@@ -20,7 +20,7 @@ if [ `rpm -qa | grep -e "^httpd-2" | wc -l` -eq 0 ]; then
     fi
 fi
 
-if [ `rpm -qa | grep "php-fpm" | wc -l` -eq 0 ]; then
+if [ -z "`rpm -qa php-fpm`" ]; then
     echo Installing php ${PHP_VERSION}
     sudo dnf -y module install php:${PHP_VERSION}
 
@@ -62,29 +62,37 @@ if [ `rpm -qa | grep "php-fpm" | wc -l` -eq 0 ]; then
         echo extension=sqlsrv >> ${PHP_EXT_DIR}/20-sqlsrv.ini
     fi
 
+    cat << EOF > ${PHP_EXT_DIR}/99-dev.ini
+    display_errors = 1
+    display_startup_errors = 1
+    error_reporting = E_ALL
+EOF
+
     echo Restarting PHP-FPM...
     sudo systemctl restart php-fpm
 
     echo Restarting Apache httpd...
     sudo systemctl restart httpd
-fi
 
-cat <<-'EOF' > /var/www/html/info.php
+    echo "<?php phpinfo();" > /var/www/html/info.php
+
+    if [ ! -f /var/www/html/test-db.php ]; then
+        cat << EOF > /var/www/html/test-db.php
     <?php
-    $con=new PDO(
+    \$con = new PDO(
         "sqlsrv:Server=localhost,1433;Database=master",
         "sa",
-        getenv("MSSQL_SA_PASSWORD")
+        "${MSSQL_SA_PASSWORD}"
     );
-    $stmt=$con->prepare("SELECT @@Version as SQL_VERSION, CURRENT_TIMESTAMP as TIME");
-    $stmt->execute();
-    $stmt->setFetchMode(PDO::FETCH_ASSOC);
-    echo '<pre>';
-    var_dump($stmt->fetch());
-    echo '</pre>';
-    echo phpinfo();
+    \$stmt = \$con->prepare("SELECT @@Version as SQL_VERSION, CURRENT_TIMESTAMP as TIME");
+    \$stmt->execute();
+    \$stmt->setFetchMode(PDO::FETCH_ASSOC);
 EOF
 
-php /var/www/html/info.php
+    php /var/www/html/test-db.php
 
-echo 'Done!'
+    fi
+fi
+
+echo "$0 done!"
+ 

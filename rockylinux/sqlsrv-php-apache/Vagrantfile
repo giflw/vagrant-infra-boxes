@@ -2,8 +2,9 @@
 # vi: set ft=ruby :
 
 $defaults = {
+  "RANDOM_PORTS" => "false",
   "VM_IP" => "",
-  "VM_MEMORY" => 2048,
+  "VM_MEMORY" => 2560,
   "VM_CPUS" => 2,
   "VM_GUI" => "false",
   "VM_DEFAULT_SYNCED_FOLDER" => "false",
@@ -15,9 +16,9 @@ $defaults = {
   "SQL_INSTALL_USER" => "admin",
   "SQL_INSTALL_USER_PASSWORD" => "Admin123!",
   "PHP_VERSION" => "7.2",
-  "MSSQL_VERSION" => "2019",
-  "HTTP_PORT" => 8080,
-  "MSSQL_PORT" => 1433,
+  "MSSQL_VERSION" => 2019,
+  "HTTP_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(8100..8200) : 8080,
+  "MSSQL_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(10000..10100) : 1433,
   "WWW_FOLDER" => '.'
 }
 
@@ -28,6 +29,7 @@ def env(var_name)
   $env_calls[var_name] = value
   return value
 end
+env("RANDOM_PORTS")
 
 
 Vagrant.configure("2") do |config|
@@ -35,15 +37,6 @@ Vagrant.configure("2") do |config|
   ip = env('VM_IP')
   memory = env('VM_MEMORY')
   cpus = env('VM_CPUS')
-
-  config.trigger.before :up do |trigger|
-    trigger.info = "Vagrant UP"
-    trigger.ruby do |env, machine|
-      puts "VM_IP: #{ip} (private network)"
-      puts "VM_MEMORY: #{memory}"
-      puts "VM_CPUS: #{cpus}"
-    end
-  end
 
   config.vm.post_up_message = ''
 
@@ -58,7 +51,10 @@ Vagrant.configure("2") do |config|
     config.vm.network "private_network", ip: ip
   end
 
-  config.vm.synced_folder env('WWW_FOLDER'), "/var/www/html"
+  www_folder = env('WWW_FOLDER')
+  unless www_folder&.empty?
+    config.vm.synced_folder env('WWW_FOLDER'), "/var/www/html"
+  end
 
   config.vm.provider "virtualbox" do |vb|
     if env("VM_GUI") == "true"
@@ -87,8 +83,10 @@ Vagrant.configure("2") do |config|
       "MSSQL_VERSION" => env('MSSQL_VERSION')
     },
   inline: <<-SHELL
-    cp -v /vagrant/vagrant-swapfile.sh /usr/local/bin/vagrant-swapfile.sh
-    chmod +x /usr/local/bin/vagrant-swapfile.sh
+    if [ -f /vagrant/vagrant-swapfile.sh ]; then
+      cp -v /vagrant/vagrant-swapfile.sh /usr/local/bin/vagrant-swapfile.sh
+      chmod +x /usr/local/bin/vagrant-swapfile.sh
+    fi
     for script in install-mssql-server.sh install-httpd-php.sh; do
       if [ -f /vagrant/${script} ]; then
         cp -v /vagrant/${script} /usr/local/bin/${script}
@@ -103,19 +101,31 @@ Vagrant.configure("2") do |config|
     echo "=================================================="
   SHELL
 
-  puts "=================================================="
-  puts "VM networks:"
-  config.vm.networks.each do | key, item |
-    netinfo="#{item[:protocol].rjust(6, ' ')} #{item[:guest].to_s.rjust(6, ' ')} => #{item[:host].to_s.rjust(6, ' ')}"
-    puts "#{key}: #{netinfo} (##{item[:id]})"
-  end
-  puts "=================================================="
 
-  puts "=================================================="
-  puts "Readed environment variables"
-  $env_calls.each do | key, value |
-    puts "#{key}: #{value}"
-  end
-  puts "=================================================="
+  config.trigger.before :up do |trigger|
+    trigger.info = "Vagrant UP"
+    trigger.ruby do |env, machine|
 
+      puts "=================================================="
+      puts "VM resources:"
+      puts "VM_IP: #{ip} (private network)"
+      puts "VM_MEMORY: #{memory}"
+      puts "VM_CPUS: #{cpus}"
+
+      puts "=================================================="
+      puts "VM networks:"
+      config.vm.networks.each do | key, item |
+        netinfo="#{item[:protocol].rjust(6, ' ')} #{item[:guest].to_s.rjust(6, ' ')} => #{item[:host].to_s.rjust(6, ' ')}"
+        puts "#{key}: #{netinfo} (##{item[:id]})"
+      end
+      puts "=================================================="
+
+      puts "Readed environment variables"
+      $env_calls.each do | key, value |
+        puts "#{key}: #{value}"
+      end
+      puts "=================================================="
+
+    end
+  end
 end
