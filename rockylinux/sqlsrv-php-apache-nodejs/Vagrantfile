@@ -16,9 +16,10 @@ $defaults = {
   "SQL_INSTALL_USER" => "admin",
   "SQL_INSTALL_USER_PASSWORD" => "Admin123!",
   "PHP_VERSION" => "7.2",
-  "MSSQL_VERSION" => 2019,
+  #"MSSQL_VERSION" => 2019,
   "HTTP_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(8100..8200) : 8080,
   "MSSQL_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(10000..10100) : 1433,
+  "NODEJS_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(30000..30100) : 3000,
   "WWW_FOLDER" => '.'
 }
 
@@ -44,6 +45,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.network "forwarded_port", guest: 80, host: env('HTTP_PORT')
   config.vm.network "forwarded_port", guest: 1433, host: env('MSSQL_PORT')
+  config.vm.network "forwarded_port", guest: 3000, host: env('NODEJS_PORT')
 
   config.vm.network "public_network"
 
@@ -80,14 +82,15 @@ Vagrant.configure("2") do |config|
       "SQL_INSTALL_USER" => env('SQL_INSTALL_USER'),
       "SQL_INSTALL_USER_PASSWORD" => env('SQL_INSTALL_USER_PASSWORD'),
       "PHP_VERSION" => env('PHP_VERSION'),
-      "MSSQL_VERSION" => env('MSSQL_VERSION')
+      "NODEJS_VERSION" => env('NODEJS_VERSION')#,
+      #"MSSQL_VERSION" => env('MSSQL_VERSION')
     },
   inline: <<-SHELL
     if [ -f /vagrant/vagrant-swapfile.sh ]; then
       cp -v /vagrant/vagrant-swapfile.sh /usr/local/bin/vagrant-swapfile.sh
       chmod +x /usr/local/bin/vagrant-swapfile.sh
     fi
-    for script in install-mssql-server.sh install-httpd-php.sh; do
+    for script in install-mssql-server.sh install-httpd-php.sh install-nodejs-yarn.sh; do
       if [ -f /vagrant/${script} ]; then
         cp -v /vagrant/${script} /usr/local/bin/${script}
         chmod +x /usr/local/bin/${script}

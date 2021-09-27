@@ -68,6 +68,12 @@ if [ -z "`rpm -qa php-fpm`" ]; then
     error_reporting = E_ALL
 EOF
 
+    echo Installing Composer...
+    sudo dnf -y install wget
+    wget https://getcomposer.org/installer -O /tmp/composer-installer.php
+    sudo php /tmp/composer-installer.php --filename=composer --install-dir=/usr/local/bin
+    unlink /tmp/composer-installer.php
+
     echo Restarting PHP-FPM...
     sudo systemctl restart php-fpm
 
