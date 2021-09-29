@@ -92,9 +92,11 @@ sudo /opt/mssql/bin/mssql-conf set sqlagent.enabled $SQL_ENABLE_AGENT
 if [ "$SQL_INSTALL_FULLTEXT" = 'true' -a -z "`rpm -qa mssql-server-fts`" ]; then
   echo Installing SQL Server Full-Text Search...
   sudo yum install -y mssql-server-fts
-elif [ -n "`rpm -qa mssql-server-fts`" ]
+elif [ "$SQL_INSTALL_FULLTEXT" = 'false' -a -n "`rpm -qa mssql-server-fts`" ]; then
   echo Removing SQL Server Full-Text Search...
   sudo yum remove -y mssql-server-fts
+else
+  echo 'Nothing to do with SQL Server Full-Text Search'
 fi
 
 # Configure firewall to allow TCP port 1433:
