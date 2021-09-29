@@ -4,6 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd $SCRIPT_DIR
 
+WSL=`uname -a | grep WSL | grep -v grep`
+vagrant_cmd=`test -n "$WSL" && echo vagrant.exe || echo vagrant`
+
 export RANDOM_PORTS=true
 
 function build_box {
@@ -23,20 +26,20 @@ function build_box {
     echo "Name:         $name"
     echo "Directory:    `pwd`"
 
-    vagrant up
+    $vagrant_cmd up
 
-    vagrant halt
+    $vagrant_cmd halt
 
     if [ -f "${name}.box" ]; then
         rm "${name}.box"
     fi
 
-    vagrant package \
+    $vagrant_cmd package \
         --info info.json \
         --output "${name}.box" \
         --vagrantfile Vagrantfile
 
-    vagrant cloud publish \
+    $vagrant_cmd cloud publish \
         giflw/${name} \
         "`jq .os -r info.json | cut -f 2 -d -`-`date --utc +%Y%m%d%H%M`" \
         virtualbox \
@@ -48,7 +51,7 @@ function build_box {
         --no-private \
         --force
 
-    vagrant destroy -f
+    $vagrant_cmd destroy -f
 
     rm "${name}.box"
 }
