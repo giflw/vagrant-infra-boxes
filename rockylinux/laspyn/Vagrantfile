@@ -107,6 +107,7 @@ Vagrant.configure("2") do |config|
 
   config.trigger.before :up do |trigger|
     trigger.info = "Vagrant UP"
+
     trigger.ruby do |env, machine|
 
       puts "=================================================="

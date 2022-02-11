@@ -1,7 +1,0 @@
-{
-    "author": "Guilherme I F L Weizenmann",
-    "homepage": "https://github.com/giflw/vagrant-infra-boxes/tree/main/rockylinux/sqlsrv-php-apache-nodejs",
-    "os": "rockylinux-8.4",
-    "description": "Rocky Linux 8.4 - MS SQL Server 2019 + PHP 7.2 (w/ composer) + Apache httpd + Node JS 14 (w/ yarn)",
-    "env": "PHP_VERSION=7.2\nNODEJS_VERSION=14\nVM_DEFAULT_SYNCED_FOLDER=true\nWWW_FOLDER="
-}

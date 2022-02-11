@@ -1,0 +1,7 @@
+{
+    "author": "Guilherme I F L Weizenmann",
+    "homepage": "https://github.com/giflw/vagrant-infra-boxes/tree/main/rockylinux/laspyn",
+    "os": "rockylinux-8.5",
+    "description": "Rocky Linux 8.5: Apache httpd, MS SQL Server 2019, PHP 7.2 (w/ composer), Yarn, Node JS 14",
+    "env": "PHP_VERSION=7.2\nNODEJS_VERSION=16\nVM_DEFAULT_SYNCED_FOLDER=true\nWWW_FOLDER="
+}
