@@ -7,7 +7,7 @@ $defaults = {
   "VM_MEMORY" => 2560,
   "VM_CPUS" => 2,
   "VM_GUI" => "false",
-  "VM_DEFAULT_SYNCED_FOLDER" => "false",
+  "VM_DEFAULT_SYNCED_FOLDER" => "true",
   "MSSQL_SA_PASSWORD" => "YourStrong!Passw0rd",
   "MSSQL_PID" => "Developer",
   "MSSQL_ALLOW_FIREWALL" => "true",
@@ -16,11 +16,12 @@ $defaults = {
   "SQL_INSTALL_USER" => "admin",
   "SQL_INSTALL_USER_PASSWORD" => "Admin123!",
   "PHP_VERSION" => "7.2",
+  "NODEJS_VERSION" => "16",
   #"MSSQL_VERSION" => 2019,
   "HTTP_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(8100..8200) : 8080,
   "MSSQL_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(10000..10100) : 1433,
   "NODEJS_PORT" => ENV["RANDOM_PORTS"] == "true" ? rand(30000..30100) : 3000,
-  "WWW_FOLDER" => '.'
+  "WWW_FOLDER" => ''
 }
 
 $env_calls = {}
@@ -47,7 +48,7 @@ Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 1433, host: env('MSSQL_PORT')
   config.vm.network "forwarded_port", guest: 3000, host: env('NODEJS_PORT')
 
-  config.vm.network "public_network"
+  #config.vm.network "public_network"
 
   unless ip&.empty?
     config.vm.network "private_network", ip: ip
