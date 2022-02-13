@@ -2,10 +2,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+echo "Script directory: $SCRIPT_DIR"
 cd $SCRIPT_DIR
 
-WSL=`uname -a | grep WSL | grep -v grep`
-vagrant_cmd=`test -n "$WSL" && echo vagrant.exe || echo vagrant`
+vagrant_cmd=vagrant
 
 export RANDOM_PORTS=true
 
@@ -64,13 +65,15 @@ for distro in `ls -d */`; do
     (
         cd $distro
         for box in `ls -d */`; do
+	(
             echo '--------------------------------------------------'
             echo $box
             cd $box
             pwd
             build_box
             echo '--------------------------------------------------'
-        done
+    	)
+    	done
     )
     echo '=================================================='
     echo '=================================================='
