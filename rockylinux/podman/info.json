@@ -1,0 +1,7 @@
+{
+    "author": "Guilherme I F L Weizenmann",
+    "homepage": "https://github.com/giflw/vagrant-infra-boxes/tree/main/rockylinux/podman",
+    "os": "rockylinux-8.5",
+    "description": "Rocky Linux 8.5: Podman, Buildah",
+    "env": ""
+}

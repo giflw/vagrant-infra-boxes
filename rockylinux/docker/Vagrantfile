@@ -1,0 +1,15 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "giflw/rockylinux"
+
+  config.vm.provision "shell", inline: <<-SHELL
+    dnf -y config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+    dnf update
+    dnf -y install docker-ce docker-ce-cli containerd.io
+    systemctl enable docker
+    systemctl start docker
+    usermod -aG docker vagrant
+  SHELL
+end
