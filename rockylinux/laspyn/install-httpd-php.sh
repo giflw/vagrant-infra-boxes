@@ -74,6 +74,10 @@ EOF
     sudo php /tmp/composer-installer.php --filename=composer --install-dir=/usr/local/bin
     unlink /tmp/composer-installer.php
 
+    if [ -z "`tr ':' ' ' <<< $PATH | xargs -n 1 echo | grep /usr/local/bin`" ]; then
+        echo PATH=/usr/local/bin:$PATH > /etc/profile.d/path.sh
+    fi
+
     echo Restarting PHP-FPM...
     sudo systemctl restart php-fpm
 
