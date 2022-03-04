@@ -98,6 +98,8 @@ Vagrant.configure("2") do |config|
       fi
       /usr/local/bin/${script}
     done
+    path=`cat /etc/profile.d/path.sh | tr : $'\n' | uniq  | tr $'\n' ':'`
+    echo ${path%*:} > /etc/profile.d/path.sh
     echo "=================================================="
     echo "Done shell provision from ${VM_BOX}!"
     echo "Network interfaces:"

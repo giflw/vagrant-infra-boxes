@@ -39,8 +39,15 @@ if [ -z "$MSSQL_SA_PASSWORD" ]; then
   exit 1
 fi
 
+# Add SQL Server tools to the path by default:
+if ! grep '/opt/mssql-tools/bin:/opt/mssql/bin' /etc/profile.d/mssql-server.sh &> /dev/null; then
+  echo Adding SQL Server tools to your path...
+  echo PATH="$PATH:/opt/mssql-tools/bin:/opt/mssql/bin" > /etc/profile.d/path.sh
+  source /etc/profile.d/path.sh
+fi
+
 mssql_installed=1
-if [ ! `which mssql-conf 2> /dev/null` ]; then
+if ! which mssql-conf 2> /dev/null; then
   mssql_installed=0
 
   # dependencies:start
@@ -58,7 +65,6 @@ if [ ! `which mssql-conf 2> /dev/null` ]; then
   echo Installing SQL Server...
   sudo yum install -y mssql-server
 fi
-echo "mssql_installed = $mssql_installed"
 
 echo Running mssql-conf setup...
 if [ $mssql_installed -eq 1 ]; then
@@ -68,20 +74,12 @@ sudo MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD \
      MSSQL_PID=$MSSQL_PID \
      /opt/mssql/bin/mssql-conf -n setup accept-eula
 
-if [ ! `which sqlcmd 2> /dev/null` ]; then
-  echo Installing mssql-tools and unixODBC developer...
-  sudo curl -o /etc/yum.repos.d/msprod.repo https://packages.microsoft.com/config/rhel/8/prod.repo
-  sudo ACCEPT_EULA=Y yum install -y mssql-tools unixODBC unixODBC-devel
-fi
-
-# Add SQL Server tools to the path by default:
-if [ ! -d '/etc/profile.d' ]; then
-  mkdir /etc/profile.d
-fi
-if [ ! `grep '/opt/mssql-tools/bin:/opt/mssql/bin' /etc/profile.d/mssql-server.sh 2> /dev/null` ]; then
-  echo Adding SQL Server tools to your path...
-  echo PATH="$PATH:/opt/mssql-tools/bin:/opt/mssql/bin" >> /etc/profile.d/mssql-server.sh
-  source /etc/profile.d/mssql-server.sh
+if ! which sqlcmd 2> /dev/null; then
+  echo Installing mssql-tools
+  if [ ! -f /etc/yum.repos.d/mssql-release.repo ]; then
+    sudo curl -o /etc/yum.repos.d/mssql-release.repo https://packages.microsoft.com/config/rhel/8/prod.repo
+  fi
+  sudo ACCEPT_EULA=Y yum install -y mssql-tools
 fi
 
 # Optional Enable SQL Server Agent :

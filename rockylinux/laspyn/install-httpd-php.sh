@@ -21,8 +21,19 @@ if [ -z "`rpm -qa httpd`" ]; then
 fi
 
 if [ -z "`rpm -qa php-fpm`" ]; then
+    echo Installing MS SQL Server PHP driver...
+    if [ ! -f /etc/yum.repos.d/mssql-release.repo ]; then
+        curl https://packages.microsoft.com/config/rhel/8/prod.repo | sudo tee /etc/yum.repos.d/mssql-release.repo > /dev/null
+    fi
+    sudo ACCEPT_EULA=Y yum install -y msodbcsql17
+
+    echo Installing REMI repository...
+    sudo dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+    sudo dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    sudo dnf -y module reset php
+
     echo Installing php ${PHP_VERSION}
-    sudo dnf -y module install php:${PHP_VERSION}
+    sudo dnf -y module install php:remi-${PHP_VERSION}
 
     echo Installing php extensions
     sudo dnf -y install \
@@ -34,34 +45,17 @@ if [ -z "`rpm -qa php-fpm`" ]; then
         php-opcache \
         php-pdo \
         php-pear \
-        php-pdo \
+        php-sqlsrv \
         php-xml \
         php-zip
 
     echo Enabling php-fpm...
-    echo '<?php phpinfo(); ?>' | sudo tee > /var/www/html/info.php
+    echo '<?php phpinfo(); ?>' | sudo tee /var/www/html/info.php > /dev/null
     sudo systemctl enable --now php-fpm
 
     echo Installing MS SQL Server PHP driver...
 
-    sudo dnf install -y php-devel unixODBC unixODBC-devel
-
-    sudo pecl channel-update pecl.php.net
-    if [ `sudo pecl list | grep sqlsrv | grep -v grep  | wc -l` -eq 0 ]; then
-        sudo pecl install sqlsrv-5.8.1
-        chmod +x /usr/lib64/php/modules/sqlsrv.so
-        sudo pecl install pdo_sqlsrv-5.8.1
-        chmod +x /usr/lib64/php/modules/pdo_sqlsrv.so
-    fi
-
-    sudo dnf remove -y php-devel unixODBC-devel
-
     PHP_EXT_DIR=`php --ini | grep "Scan for additional .ini files" | sudo sed -e "s|.*:\s*||"`
-    if [ `grep pdo_sqlsrv ${PHP_EXT_DIR}/30-pdo_sqlsrv.ini 2> /dev/null | grep -v grep | wc -l` -eq 0 ]; then
-        echo extension=pdo_sqlsrv >> ${PHP_EXT_DIR}/30-pdo_sqlsrv.ini
-        echo extension=sqlsrv >> ${PHP_EXT_DIR}/20-sqlsrv.ini
-    fi
-
     cat << EOF > ${PHP_EXT_DIR}/99-dev.ini
     display_errors = 1
     display_startup_errors = 1
