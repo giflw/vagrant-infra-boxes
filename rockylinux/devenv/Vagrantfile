@@ -1,0 +1,112 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "giflw/rockylinux"
+
+  if ENV['BUILDING'] != 'true' then
+    config.vm.network "forwarded_port", guest: 80, host: 8080
+    config.vm.network "forwarded_port", guest: 3000, host: 3000
+    config.vm.network "forwarded_port", guest: 4567, host: 4567
+    config.vm.network "forwarded_port", guest: 5432, host: 5432
+    config.vm.network "forwarded_port", guest: 8000, host: 8000
+    config.vm.network "forwarded_port", guest: 8080, host: 9080
+
+    config.vm.network "public_network"
+
+    config.vm.synced_folder "#{Dir.home()}/Workspace", "/home/vagrant/Workspace"
+    config.vm.synced_folder "#{Dir.home()}/Workspace", "/var/www/html"
+    
+    Dir.mkdir './vm' unless File.exists?('./vm')
+    ['cache', 'config', 'local', 'composer', 'm2', 'npm', 'yarn'].each do |dir|
+      localDir = "#{Dir.home()}/.#{dir}"
+      Dir.mkdir(localDir) unless File.exists?(localDir)
+      config.vm.synced_folder localDir, "/home/vagrant/.#{dir}"
+    end
+  end
+
+  config.vm.provision "shell", inline: <<-SHELL
+    if [ -f "/home/vagrant/.zshrc" ]; then
+      exit
+    fi
+    # PODMAN
+    dnf install -y buildah podman
+
+    # UTILS
+    dnf -y install vim tree tmux zsh git
+
+    # ZSH
+    chsh --shell /usr/bin/zsh vagrant 
+    sudo -H -u vagrant zsh -c '
+      cd ~
+      sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+      sed -i "s/robbyrussell/agnoster/g" ~/.zshrc
+      
+      cd /tmp
+      wget -O bat.zip https://github.com/sharkdp/bat/releases/download/v0.20.0/bat-v0.20.0-x86_64-unknown-linux-musl.tar.gz
+      mkdir $HOME/bin
+      tar -xvzf bat.zip -C $HOME/bin
+      cd $HOME/bin
+      mv bat*/bat bat
+      echo "export PATH=\"$HOME/bin:$PATH\"" >> ~/.zshrc
+
+      cd /tmp
+      # clone
+      git clone https://github.com/powerline/fonts.git --depth=1
+      # install
+      cd fonts
+      ./install.sh
+      # clean-up a bit
+      cd ..
+      rm -rf fonts
+    '
+
+    # JAVA WORLD
+    sudo -H -u vagrant zsh -c '
+      curl -s "https://get.sdkman.io" | zsh
+      source "/home/vagrant/.sdkman/bin/sdkman-init.sh"
+      for pkg in groovy jbake maven mvnd webtau; do
+        sdk i $pkg
+      done
+      sdk i java 17.0.2-tem
+    '
+
+    # NODEJS / DENO
+    sudo -H -u vagrant zsh -c '
+      cd ~
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | zsh
+      source ~/.zshrc
+      nvm install node
+      curl -fsSL https://deno.land/install.sh | sh
+      echo "export DENO_INSTALL=\"$HOME/.deno\"" >> ~/.zshrc 
+      echo "export PATH=\"$DENO_INSTALL/bin:$PATH\"" >> ~/.zshrc
+    '
+
+    # POSTGRESQL
+    dnf -y module enable postgresql:13
+    dnf -y install postgresql-server
+    postgresql-setup --initdb
+    systemctl enable postgresql
+    systemctl start postgresql
+    # sudo -i -u postgres; psql
+
+    # APACHE / PHP
+    dnf -y install httpd
+    sed -i "s/User apache/User vagrant/g" /etc/httpd/conf/httpd.conf
+    sed -i "s/Group apache/Group vagrant/g" /etc/httpd/conf/httpd.conf
+      
+    systemctl enable httpd
+    systemctl start httpd
+    firewall-cmd --add-service=http --permanent
+    firewall-cmd --reload
+
+    dnf -y install epel-release
+    dnf -y install dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+    dnf -y module enable php:remi-8.1
+    dnf -y install php php-bcmath php-cli php-curl php-gd php-imap php-intl php-json php-mbstring php-opcache php-pdo php-pgsql php-xml php-zip composer
+    
+    systemctl restart httpd
+
+    chown vagrant.vagrant /var/www/html -R
+    SHELL
+end

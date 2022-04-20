@@ -69,7 +69,7 @@ echo "Script directory: $SCRIPT_DIR"
 cd $SCRIPT_DIR
 
 DISTROS_BUILD="$SCRIPT_DIR/distros.build"
-echo "Building boxes id:"
+echo "Building boxes ids:"
 cat $DISTROS_BUILD
 echo
 echo '------------------'
@@ -85,6 +85,7 @@ vagrant_cmd=vagrant
 export RANDOM_PORTS=true
 
 function build_box {
+    export BUILDING=true
     envvars="`jq -r .env info.json`"
     if [ -n "$envvars" ]; then
         set -a # -o allexport
