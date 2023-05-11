@@ -13,6 +13,10 @@ A stack containing more softwares on the list can be used to get a stack with le
 - / means OR
 - \+ means AND
 
+## Variants
+
+- cilab: CI using GitLab Runner
+
 ## Stacks
 
 - AMP: Apache, MySQL/MariaDB, PHP
@@ -34,6 +38,7 @@ A stack containing more softwares on the list can be used to get a stack with le
 - LLMPPS: Linux, Lighttpd, MySQL/MariaDB, PHP+Perl+Python
 - LYCE: Linux, Yaws, CouchDB, Erlang
 - LYME: Linux, Yaws, Mnesia, Erlang
+- **LYNDJ: Linux, Yarn, NodeJS, Docker, Java+Maven**
 - WAMP: Windows, Apache, MySQL/MariaDB, PHP/Perl/Python
 - WIMP: Windows, Internet Information Services (IIS), MySQL/MariaDB, PHP/Perl/Python
 - XAMPP : Cross-platform, Apache, MariaDB, PHP, Perl
